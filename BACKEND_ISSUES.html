@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AYAKAA Driver App — Backend Issues (Genuine)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      padding: 40px 56px 36px;
+      color: white;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: #ef4444;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+    .hero h1 { font-size: 28px; font-weight: 800; color: #CAFF00; }
+    .hero p  { color: rgba(255,255,255,0.5); font-size: 13px; margin-top: 6px; }
+    .hero-meta { margin-top: 20px; display: flex; gap: 32px; flex-wrap: wrap; }
+    .hero-meta span  { color: rgba(255,255,255,0.45); font-size: 11px; }
+    .hero-meta strong { color: rgba(255,255,255,0.85); display: block; font-size: 13px; }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 36px 56px 80px; }
+
+    .context-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      border-left: 4px solid #CAFF00;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    .context-box h2 { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
+    .context-box p  { font-size: 13px; color: #374151; margin-bottom: 8px; }
+    .context-box p:last-child { margin-bottom: 0; }
+
+    .issue {
+      background: #fff;
+      border-radius: 16px;
+      margin-bottom: 28px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+    .issue-header {
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid #f3f4f6;
+      background: #fafafa;
+    }
+    .issue-num {
+      background: #1a1a1a;
+      color: #CAFF00;
+      font-size: 13px;
+      font-weight: 800;
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .issue-title  { font-size: 17px; font-weight: 700; color: #1a1a1a; }
+    .issue-ep     { margin-left: auto; font-size: 12px; font-weight: 600; color: #6b7280; background: #f3f4f6; padding: 4px 10px; border-radius: 6px; font-family: monospace; }
+    .issue-body   { padding: 24px; }
+
+    .badge-critical { display:inline-block; background:#fee2e2; color:#991b1b; font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px; }
+
+    pre {
+      background: #1a1a1a;
+      color: #e2e8f0;
+      font-family: 'Cascadia Code','Fira Code','Courier New',monospace;
+      font-size: 12px;
+      line-height: 1.75;
+      padding: 16px 20px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin: 10px 0;
+    }
+    .ok   { color: #4ade80; }
+    .bad  { color: #f87171; font-weight: 700; }
+    .key  { color: #CAFF00; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    .col-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; padding: 7px 14px; border-radius: 8px 8px 0 0; }
+    .label-actual   { background: #991b1b; color: white; }
+    .label-expected { background: #065f46; color: white; }
+    .col-box { border-radius: 0 0 10px 10px; overflow: hidden; }
+
+    .ask-box { background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; padding: 18px 20px; margin-top: 18px; }
+    .ask-box h4 { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 10px; }
+    .ask-box ol  { padding-left: 18px; }
+    .ask-box li  { font-size: 13px; color: #78350f; margin-bottom: 8px; }
+
+    code {
+      background: #f3f4f6; color: #1a1a1a;
+      font-family: 'Cascadia Code','Fira Code',monospace;
+      font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;
+    }
+
+    .resolved-note {
+      background: #d1fae5;
+      border: 1px solid #6ee7b7;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #065f46;
+    }
+    .resolved-note strong { color: #064e3b; }
+
+    .section-title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-badge">Backend Action Required</div>
+  <h1>AYAKAA Driver App — Backend Issues</h1>
+  <p>Two genuine gaps in the API that cannot be resolved on the app side</p>
+  <div class="hero-meta">
+    <div><span>App</span><strong>AYAKAA Driver (Flutter Android)</strong></div>
+    <div><span>Base URL</span><strong>https://royalblue-kudu-237366.hostingersite.com/api</strong></div>
+    <div><span>Date</span><strong>2026-04-26</strong></div>
+    <div><span>Open Issues</span><strong>2</strong></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Context -->
+  <div class="context-box">
+    <h2>Note to backend developer</h2>
+    <p>
+      The app team has reviewed the API documentation and corrected all parameter names and request
+      formats on the client side (<code>driver_id</code> instead of <code>d_id</code>,
+      <code>vehicle_id</code> instead of <code>v_id</code>, FormData for uploads, etc.).
+      The issues in this document are the <strong>two remaining problems that can only be fixed server-side</strong>.
+    </p>
+    <p>
+      Everything else (trip_list, upload_docs, vehicle_types, documentNames) is either working or
+      waiting to be re-tested after this backend fix.
+    </p>
+  </div>
+
+  <!-- Already resolved note -->
+  <div class="resolved-note">
+    <strong>Issues resolved on the app side (no backend action needed):</strong>
+    trip_list now sends <code>driver_id</code> + <code>tripHistory:false</code> ·
+    update_vehicleState now sends <code>vehicle_id</code> (not <code>v_id</code>) ·
+    upload_docs now uses <code>FormData</code> with <code>driver_id</code>, <code>document_id</code>,
+    and <code>fields[name]=value</code> array notation.
+  </div>
+
+  <div class="section-title">Remaining Backend Issues</div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ISSUE 1 -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="issue">
+    <div class="issue-header">
+      <div class="issue-num">1</div>
+      <div class="issue-title">vehicle_insert — does not return <code>vehicle_id</code> in any response</div>
+      <div class="issue-ep">POST /vehicle_insert</div>
+    </div>
+    <div class="issue-body">
+      <div class="badge-critical">Critical — Blocks Online/Offline toggle permanently</div>
+
+      <p style="font-size:13px; color:#374151; margin-bottom:16px;">
+        After a driver registers a vehicle, the app needs to store the vehicle's database ID
+        (<code>vehicle_id</code>) so it can be passed to <code>/update_vehicleState</code> later.
+        Neither the success response nor the "already registered" response currently includes this value.
+        As a result, the Online/Offline toggle is broken for <strong>all drivers</strong>.
+      </p>
+
+      <div class="two-col">
+        <div>
+          <div class="col-label label-actual">Current response — success case</div>
+          <div class="col-box">
+            <pre>{
+  <span class="bad">"code": "0",</span>
+  <span class="bad">"message": "Vehicle Registered"</span>
+}
+
+<span class="bad">⚠ No vehicle_id returned.
+⚠ Flat format (other endpoints
+   use {"status":{...},"data":{...}})</span></pre>
+          </div>
+        </div>
+        <div>
+          <div class="col-label label-actual">Current response — already registered case</div>
+          <div class="col-box">
+            <pre>{
+  <span class="bad">"code": "1",</span>
+  <span class="bad">"message": "Driver Already registered
+    With Another vehicle!!"</span>
+}
+
+<span class="bad">⚠ No vehicle_id returned here either.
+⚠ App has no way to retrieve it.</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="col-label label-expected">Expected response — success case</div>
+          <div class="col-box">
+            <pre>{
+  "status": {
+    "code": <span class="ok">"0"</span>,
+    "message": <span class="ok">"Vehicle Registered Successfully"</span>
+  },
+  "data": {
+    <span class="ok">"vehicle_id": 42</span>   ← ADD THIS
+  }
+}</pre>
+          </div>
+        </div>
+        <div>
+          <div class="col-label label-expected">Expected response — already registered case</div>
+          <div class="col-box">
+            <pre>{
+  "status": {
+    "code": <span class="ok">"1"</span>,
+    "message": <span class="ok">"Vehicle already registered"</span>
+  },
+  "data": {
+    <span class="ok">"vehicle_id": 42</span>   ← ADD THIS TOO
+  }
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="ask-box">
+        <h4>What we need from you</h4>
+        <ol>
+          <li>
+            Return <code>vehicle_id</code> (the DB primary key from <code>corporate_wheels_vehicles</code>)
+            in <strong>both</strong> the success response and the "already registered" error response.
+          </li>
+          <li>
+            Optionally: standardise the response format to match all other endpoints —
+            <code>{"status":{"code":"X","message":"..."},"data":{...}}</code>
+            instead of the current flat <code>{"code":"X","message":"..."}</code>.
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ISSUE 2 -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="issue">
+    <div class="issue-header">
+      <div class="issue-num">2</div>
+      <div class="issue-title">update_vehicleState — still returns "Missing required parameters" after fix</div>
+      <div class="issue-ep">GET /update_vehicleState</div>
+    </div>
+    <div class="issue-body">
+      <div class="badge-critical">Critical — depends on Issue #1 being fixed first</div>
+
+      <p style="font-size:13px; color:#374151; margin-bottom:16px;">
+        The app now sends the correct parameter name (<code>vehicle_id</code>, not <code>v_id</code>).
+        However, because <code>vehicle_id</code> was never returned by <code>/vehicle_insert</code>,
+        the app currently has no value to send. The endpoint will work correctly
+        <strong>as soon as Issue #1 is fixed</strong> and the app receives a real <code>vehicle_id</code>.
+      </p>
+
+      <div>
+        <div class="col-label label-actual" style="border-radius:8px 8px 0 0;">What the app will send (once vehicle_id is available)</div>
+        <div class="col-box">
+          <pre>GET /update_vehicleState
+  ?company_id=9
+  &vehicle_id=<span class="ok">42</span>        ← will be the real ID from vehicle_insert
+  &vehicle_status=<span class="ok">0</span>     ← 0=ONLINE, 1=OFFLINE</pre>
+        </div>
+      </div>
+
+      <div class="ask-box">
+        <h4>What we need from you</h4>
+        <ol>
+          <li>
+            <strong>Fix Issue #1 first.</strong> Once <code>vehicle_id</code> is returned by
+            <code>/vehicle_insert</code>, the app will store it automatically and send it here.
+            No further changes to this endpoint should be needed.
+          </li>
+          <li>
+            If you want to test before Issue #1 is fixed: please share what <code>vehicle_id</code>
+            value the driver with <code>driver_id=2</code> currently has in the database,
+            and we can hardcode it temporarily to confirm the endpoint works.
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; color:#9ca3af; font-size:12px; padding-top:16px; border-top:1px solid #e5e7eb;">
+    AYAKAA Driver App — App team · 2026-04-26 ·
+    Base URL: <code>https://royalblue-kudu-237366.hostingersite.com/api</code>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AYAKAA Driver App — Decisions & Documentation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── TOP HEADER ── */
+    .hero {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      padding: 48px 64px 40px;
+      color: white;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: #CAFF00;
+      color: #1a1a1a;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #CAFF00;
+    }
+    .hero p {
+      color: rgba(255,255,255,0.55);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+    .hero-meta {
+      margin-top: 24px;
+      display: flex;
+      gap: 32px;
+    }
+    .hero-meta span {
+      color: rgba(255,255,255,0.5);
+      font-size: 12px;
+    }
+    .hero-meta strong {
+      color: rgba(255,255,255,0.9);
+      display: block;
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 40px 64px 80px; }
+
+    /* ── SECTION ── */
+    .section { margin-bottom: 48px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .section-number {
+      background: #CAFF00;
+      color: #1a1a1a;
+      font-size: 12px;
+      font-weight: 800;
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    /* ── TABLES ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    thead tr { background: #1a1a1a; }
+    thead th {
+      color: #CAFF00;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 12px 16px;
+      text-align: left;
+    }
+    tbody tr { border-bottom: 1px solid #f3f4f6; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafafa; }
+    tbody td { padding: 12px 16px; font-size: 13px; color: #374151; }
+    tbody td:first-child { font-weight: 600; color: #1a1a1a; }
+
+    /* ── CODE INLINE ── */
+    code {
+      background: #f3f4f6;
+      color: #1a1a1a;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 12px;
+      padding: 2px 7px;
+      border-radius: 5px;
+      border: 1px solid #e5e7eb;
+    }
+
+    /* ── CODE BLOCK ── */
+    pre {
+      background: #1a1a1a;
+      color: #CAFF00;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      padding: 20px 24px;
+      border-radius: 12px;
+      overflow-x: auto;
+      margin-top: 4px;
+    }
+    pre .comment { color: rgba(202,255,0,0.45); }
+    pre .keyword { color: #7dd3fc; }
+    pre .string  { color: #86efac; }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-open    { background: #fef3c7; color: #92400e; }
+    .badge-closed  { background: #d1fae5; color: #065f46; }
+    .badge-working { background: #d1fae5; color: #065f46; }
+    .badge-failing { background: #fee2e2; color: #991b1b; }
+    .badge-untested{ background: #f3f4f6; color: #6b7280; }
+
+    /* ── CALLOUT ── */
+    .callout {
+      background: #fffbeb;
+      border-left: 4px solid #CAFF00;
+      border-radius: 0 10px 10px 0;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #78350f;
+    }
+    .callout strong { color: #1a1a1a; }
+
+    /* ── FOLDER TREE ── */
+    .tree {
+      background: #1a1a1a;
+      color: #e5e7eb;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 2;
+      padding: 24px 28px;
+      border-radius: 12px;
+    }
+    .tree .folder { color: #CAFF00; font-weight: 700; }
+    .tree .comment { color: rgba(255,255,255,0.35); font-size: 11px; }
+
+    /* ── PHASE CARDS ── */
+    .phases {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .phase-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border-top: 3px solid #e5e7eb;
+    }
+    .phase-card.done { border-top-color: #CAFF00; }
+    .phase-card.active { border-top-color: #1a1a1a; }
+    .phase-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+    .phase-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+    }
+    .phase-apis {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .phase-status {
+      margin-top: 10px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .phase-status.done  { color: #16a34a; }
+    .phase-status.next  { color: #1a1a1a; }
+    .phase-status.todo  { color: #9ca3af; }
+
+    /* ── PRINT ── */
+    @media print {
+      body { background: white; font-size: 12px; }
+      .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .container { padding: 20px; }
+      pre, .tree { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ───────────────────────────── HERO ───────────────────────────── -->
+<div class="hero">
+  <div class="hero-badge">Internal Documentation</div>
+  <h1>AYAKAA Driver App</h1>
+  <p>Architecture decisions, API tracker, open questions &amp; build phases</p>
+  <div class="hero-meta">
+    <div><span>Platform</span><strong>Android (Flutter)</strong></div>
+    <div><span>Architecture</span><strong>MVVM Clean</strong></div>
+    <div><span>Last Updated</span><strong>2026-04-25</strong></div>
+    <div><span>Current Phase</span><strong>Phase 1 — Auth ✅</strong></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ─── 1. API BASE URL ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">1</div>
+      <div class="section-title">API Base URL</div>
+    </div>
+    <div class="callout">
+      <strong>Production Base URL:</strong>
+      <code>https://royalblue-kudu-237366.hostingersite.com/api</code>
+      &nbsp;—&nbsp; All 13 endpoints use this domain.
+      Old demo domain <code>checkyourdemo.co.in</code> is retired.
+    </div>
+    <table>
+      <thead><tr><th>Item</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>API Base</td><td><code>https://royalblue-kudu-237366.hostingersite.com/api</code></td></tr>
+        <tr><td>Profile Photo Prefix</td><td><code>https://royalblue-kudu-237366.hostingersite.com/</code></td></tr>
+        <tr><td>Old Demo (retired)</td><td><code>https://ayakademo.checkyourdemo.co.in/public/api</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 2. ARCHITECTURE ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">2</div>
+      <div class="section-title">Architecture Decisions</div>
+    </div>
+    <table>
+      <thead><tr><th>Decision</th><th>Choice</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td>Pattern</td><td>MVVM Clean Architecture</td><td>Separation of concerns; testable</td></tr>
+        <tr><td>HTTP Client</td><td><code>dio</code></td><td>Multipart uploads, interceptors, better error handling</td></tr>
+        <tr><td>State — Complex</td><td><code>flutter_bloc</code></td><td>Auth &amp; Trip List have many state transitions</td></tr>
+        <tr><td>State — Simple</td><td><code>provider</code></td><td>Profile display, toggle, vehicle form</td></tr>
+        <tr><td>Navigation</td><td><code>go_router</code></td><td>Declarative routing, redirect guards</td></tr>
+        <tr><td>Local Storage</td><td><code>shared_preferences</code></td><td>Store access_token + driver data after login</td></tr>
+        <tr><td>Image Upload</td><td><code>image_picker</code> + base64</td><td>API requires <code>data:image/png;base64,…</code> format</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 3. FOLDER STRUCTURE ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">3</div>
+      <div class="section-title">Folder Structure</div>
+    </div>
+    <div class="callout">
+      <strong>Rule:</strong> State management files (BLoC / Provider) live in global
+      <code>bloc/</code> and <code>provider/</code> folders — never inside a screen folder.
+      Screen folders contain only <code>*_screen.dart</code> UI files.
+    </div>
+    <div class="tree">
+<span class="folder">lib/</span>
+├── <span class="folder">const/</span>          <span class="comment">api_routes, app_colors, app_constants, app_session</span>
+├── <span class="folder">model/</span>          <span class="comment">driver_model, vehicle_model, document_model, trip_model</span>
+├── <span class="folder">data/</span>
+│   ├── <span class="folder">remote/</span>      <span class="comment">dio_client.dart (singleton)</span>
+│   └── <span class="folder">repository/</span>  <span class="comment">auth_, vehicle_, document_, trip_repository.dart</span>
+├── <span class="folder">bloc/</span>            <span class="comment">← GLOBAL state management (BLoC)</span>
+│   ├── <span class="folder">auth/</span>        <span class="comment">auth_bloc, auth_event, auth_state</span>
+│   ├── <span class="folder">document/</span>    <span class="comment">document_bloc, document_event, document_state</span>
+│   └── <span class="folder">trip/</span>        <span class="comment">trip_bloc, trip_event, trip_state  (Phase 5)</span>
+├── <span class="folder">provider/</span>        <span class="comment">← GLOBAL state management (Provider)</span>
+│   ├── profile_provider.dart
+│   ├── vehicle_provider.dart
+│   └── availability_provider.dart
+├── <span class="folder">screen/</span>          <span class="comment">← UI only, no business logic</span>
+│   ├── splash/    login/    otp/    dashboard/
+│   ├── profile/   vehicle/  documents/   trips/   settings/
+└── <span class="folder">widget/</span>          <span class="comment">custom_button, custom_text_field, otp_input_field, …</span>
+    </div>
+  </div>
+
+  <!-- ─── 4. STATE MANAGEMENT ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">4</div>
+      <div class="section-title">State Management Split</div>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>Tool</th><th>States / Reason</th></tr></thead>
+      <tbody>
+        <tr><td>Login → OTP → Token</td><td><code>BLoC</code></td><td>Initial → Loading → OtpSent → Authenticated → Error</td></tr>
+        <tr><td>Trip List (tabs)</td><td><code>BLoC</code></td><td>upcoming / ongoing / completed / rejected tabs</td></tr>
+        <tr><td>Document Upload</td><td><code>BLoC</code></td><td>Async upload, insert vs update response states</td></tr>
+        <tr><td>Profile Display</td><td><code>Provider</code></td><td>Simple read-only from stored session</td></tr>
+        <tr><td>Vehicle Registration</td><td><code>Provider</code></td><td>Form state + cascading dropdowns</td></tr>
+        <tr><td>Online / Offline Toggle</td><td><code>Provider</code></td><td>Single boolean + one API call</td></tr>
+        <tr><td>Dashboard</td><td><code>Provider</code></td><td>Reads availability + profile providers</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 5. COMPANY_ID STRATEGY ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">5</div>
+      <div class="section-title">company_id Strategy</div>
+    </div>
+    <div class="callout">
+      <strong>Source:</strong> <code>driver.driver_company</code> from the OTP verify response.
+      Stored in SharedPreferences via <code>AppSession.saveSession()</code> immediately after login.
+      All repository classes read <code>AppSession.companyId</code> — fallback value is <code>5</code>.
+      <br/><br/>
+      <strong>For the team:</strong> When backend makes company_id fully dynamic per API call,
+      change only <code>AppSession.saveSession()</code>. No other files need to change.
+    </div>
+    <pre><span class="comment">// All repositories use this single pattern:</span>
+<span class="keyword">final</span> companyId = AppSession.companyId;  <span class="comment">// reads from SharedPreferences</span>
+
+<span class="comment">// AppSession.companyId returns:</span>
+<span class="comment">//   stored value (from driver.driver_company on login)  ← normal case</span>
+<span class="comment">//   fallback: 5                                          ← before first login</span></pre>
+  </div>
+
+  <!-- ─── 6. COLOR & THEME ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">6</div>
+      <div class="section-title">Color &amp; Theme</div>
+    </div>
+    <table>
+      <thead><tr><th>Token</th><th>Hex</th><th>Preview</th><th>Usage</th></tr></thead>
+      <tbody>
+        <tr><td>Primary</td><td><code>#CAFF00</code></td><td><span style="display:inline-block;width:24px;height:16px;background:#CAFF00;border-radius:4px;border:1px solid #ddd;"></span></td><td>Buttons, active states, highlights</td></tr>
+        <tr><td>Primary Dark</td><td><code>#1A1A1A</code></td><td><span style="display:inline-block;width:24px;height:16px;background:#1A1A1A;border-radius:4px;"></span></td><td>Dark surfaces, nav bar, icon on primary</td></tr>
+        <tr><td>Background</td><td><code>#F8F9FA</code></td><td><span style="display:inline-block;width:24px;height:16px;background:#F8F9FA;border-radius:4px;border:1px solid #ddd;"></span></td><td>Screen backgrounds</td></tr>
+        <tr><td>Surface</td><td><code>#FFFFFF</code></td><td><span style="display:inline-block;width:24px;height:16px;background:#FFFFFF;border-radius:4px;border:1px solid #ddd;"></span></td><td>Cards, inputs</td></tr>
+        <tr><td>Text Primary</td><td><code>#1A1A1A</code></td><td><span style="display:inline-block;width:24px;height:16px;background:#1A1A1A;border-radius:4px;"></span></td><td>Headings, body text</td></tr>
+        <tr><td>Text Secondary</td><td><code>#6B7280</code></td><td><span style="display:inline-block;width:24px;height:16px;background:#6B7280;border-radius:4px;"></span></td><td>Subtitles, labels, hints</td></tr>
+        <tr><td>Error</td><td><code>#EF4444</code></td><td><span style="display:inline-block;width:24px;height:16px;background:#EF4444;border-radius:4px;"></span></td><td>Error snackbars, validation</td></tr>
+        <tr><td>Success</td><td><code>#22C55E</code></td><td><span style="display:inline-block;width:24px;height:16px;background:#22C55E;border-radius:4px;"></span></td><td>Success states</td></tr>
+        <tr><td>Border</td><td><code>#E5E7EB</code></td><td><span style="display:inline-block;width:24px;height:16px;background:#E5E7EB;border-radius:4px;border:1px solid #ddd;"></span></td><td>Input borders, dividers</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 7. NAVIGATION FLOW ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">7</div>
+      <div class="section-title">Navigation Flow</div>
+    </div>
+    <pre>Splash
+  ├── [token exists]  →  Dashboard
+  └── [no token]      →  Login Screen
+                              └── OTP Screen
+                                    ├── [success, no vehicle]  →  Vehicle Registration
+                                    │                                    └──  Dashboard
+                                    └── [error]  →  show snackbar, stay on OTP</pre>
+  </div>
+
+  <!-- ─── 8. KEY API NOTES ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">8</div>
+      <div class="section-title">Key API Notes</div>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>API</th><th>Important Note</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>driver_login</td><td>Returns <code>user_id</code> only — no token yet. Token comes in step 2.</td></tr>
+        <tr><td>2</td><td>verify_otp</td><td>Returns <code>access_token</code> + full <code>driver</code> object. Store <code>driver.driver_company</code> as company_id.</td></tr>
+        <tr><td>4</td><td>documentNames</td><td><code>fileds</code> field (typo in API) is a JSON <strong>string</strong> — must <code>jsonDecode()</code> it to get the fields array.</td></tr>
+        <tr><td>5</td><td>upload_docs</td><td>Image must be base64 encoded: <code>data:image/png;base64,…</code></td></tr>
+        <tr><td>9</td><td>trip_list</td><td>Pass <code>tripHistory: false</code> for active trips; <code>true</code> for history.</td></tr>
+        <tr><td>11</td><td>update_vehicleState</td><td><code>vehicle_status: 0</code> = Online, <code>1</code> = Offline — counterintuitive, follows the API.</td></tr>
+        <tr><td>13</td><td>trip_otp_verify</td><td>Employee OTP — separate from driver login OTP. Verify before pickup.</td></tr>
+        <tr><td>All</td><td>Status code rule</td><td><code>status.code == "0"</code> = success, <code>"1"</code> = failure. Code is a <strong>string</strong>, not an int.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 9. OPEN QUESTIONS ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">9</div>
+      <div class="section-title">Open Questions — For Team</div>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Question</th><th>Status</th><th>Decision</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Brand color hex?</td>
+          <td><span class="badge badge-closed">Closed</span></td>
+          <td>Using <code>#CAFF00</code> lime green from design screenshots</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Is company_id dynamic from API?</td>
+          <td><span class="badge badge-closed">Closed</span></td>
+          <td>Use <code>driver.driver_company</code> from login; <code>AppSession</code> handles fallback</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Profile photo base URL?</td>
+          <td><span class="badge badge-closed">Closed</span></td>
+          <td>Same hostingersite domain</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>After OTP — dashboard or vehicle reg?</td>
+          <td><span class="badge badge-closed">Closed</span></td>
+          <td>Force Vehicle Registration first on new login</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Where does vendor_id come from?</td>
+          <td><span class="badge badge-open">Open</span></td>
+          <td>Hardcoded as <code>1</code> from API examples. Confirm if it comes from login response.</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Should trip list auto-refresh on a timer?</td>
+          <td><span class="badge badge-open">Open</span></td>
+          <td>Needs decision — affects polling architecture in Phase 5</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>What happens if <code>doc_exp_flag == 1</code> on login?</td>
+          <td><span class="badge badge-open">Open</span></td>
+          <td>Show expired docs warning? Block dashboard access?</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>Dev bypass for login during development?</td>
+          <td><span class="badge badge-closed">Closed</span></td>
+          <td>Orange "DEV — Skip Login" button visible only in <code>kDebugMode</code> builds. Bypasses API entirely, navigates straight to Vehicle Registration. Disappears in release builds automatically.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 9b. ANDROID PERMISSIONS ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">9b</div>
+      <div class="section-title">Android Permissions (AndroidManifest.xml)</div>
+    </div>
+    <table>
+      <thead><tr><th>Permission</th><th>Reason</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><code>INTERNET</code></td><td>All API calls</td><td><span class="badge badge-working">Added</span></td></tr>
+        <tr><td><code>READ_MEDIA_IMAGES</code></td><td>Image picker — Android 13+ (API 33+)</td><td><span class="badge badge-working">Added</span></td></tr>
+        <tr><td><code>READ_EXTERNAL_STORAGE</code> <code>maxSdkVersion="32"</code></td><td>Image picker — Android &lt;13</td><td><span class="badge badge-working">Added</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 10. API STATUS TRACKER ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">10</div>
+      <div class="section-title">API Status Tracker</div>
+    </div>
+    <div class="callout">
+      Update this table when testing each API. Change status to <strong>WORKING</strong> or <strong>FAILING</strong>.
+      Add notes for any failures so the backend team can fix them.
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>API Name</th><th>Method</th><th>Endpoint</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Driver Login</td><td>POST</td><td><code>/driver_login</code></td><td><span class="badge badge-working">Working ✅</span></td><td><strong>API is healthy</strong> — returns 200 OK with valid JSON. "Invalid Mobile Number" means the mobile is not registered in the AYAKAA admin panel. <strong>Backend action needed:</strong> Register driver mobile numbers in the admin portal before testing login. Use DEV bypass button in debug build to skip login during development.</td></tr>
+        <tr><td>2</td><td>Verify OTP</td><td>POST</td><td><code>/verify_otp</code></td><td><span class="badge badge-untested">Untested</span></td><td></td></tr>
+        <tr><td>3</td><td>Vehicle Registration</td><td>POST</td><td><code>/vehicle_insert</code></td><td><span class="badge badge-working">Working ✅</span></td><td><strong>Confirmed working.</strong> Response format: <code>{"code":"1","message":"..."}</code> — flat, no <code>status</code> wrapper (different from all other APIs). Handled defensively. "Driver Already registered" = soft success, navigate to dashboard. Params confirmed: <code>vehicle_id</code> (=vehicleTypeId), <code>registerno</code>, <code>vehicle_status:0</code>, <code>vehicle_addeBy</code>, <code>driver</code>=d_id.</td></tr>
+        <tr><td>4</td><td>Driver Documents (dynamic)</td><td>GET</td><td><code>/documentNames</code></td><td><span class="badge badge-working">Integrated ✅</span></td><td><strong>Confirmed from logs:</strong> Response key is <code>data</code> (not <code>documentNames</code>). Fields: <code>document_id</code>, <code>document_name</code>. <code>fileds</code> is a JSON string of <code>{"fields":[...]}</code> — decode as Map, then extract <code>fields</code> array. Field types: text | date | file | enum.</td></tr>
+        <tr><td>5</td><td>Upload Documents</td><td>POST</td><td><code>/upload_docs</code></td><td><span class="badge badge-working">Integrated ✅</span></td><td><strong>Fixed:</strong> Added <code>vendor_id</code> (was missing). <code>fileds</code> must be sent as a <strong>JSON-encoded string</strong> (e.g. <code>"[{\"name\":\"doc_data\",\"value\":\"...\"}]"</code>), not as an array — backend stores/reads it as a string. File: <code>image_picker</code> → base64 → <code>data:image/jpeg;base64,…</code></td></tr>
+        <tr><td>6</td><td>Vehicle Types</td><td>GET</td><td><code>/vehicle_types</code></td><td><span class="badge badge-working">Working ✅</span></td><td><strong>Confirmed from logs:</strong> Response key is <code>data</code> (not <code>vehicleTypes</code>). Fields: <code>vehicle_type_id</code>, <code>vehicle_type_name</code> (not <code>vt_id</code> / <code>vehicle_type</code>). Returns 200 OK with 1 type "Seedan".</td></tr>
+        <tr><td>7</td><td>Document Names</td><td>GET</td><td><code>/document_names</code></td><td><span class="badge badge-untested">Untested</span></td><td></td></tr>
+        <tr><td>8</td><td>Contract List</td><td>GET</td><td><code>/contract_list</code></td><td><span class="badge badge-untested">Untested</span></td><td></td></tr>
+        <tr><td>9</td><td>Trip List</td><td>GET</td><td><code>/trip_list</code></td><td><span class="badge badge-working">Integrated ✅</span></td><td><strong>Backend issue:</strong> Returns <code>code:"0"</code> (success) + <code>"Something went wrong!"</code> + <code>data:[]</code> — contradictory. App handles it gracefully (treats as empty result). Added <code>vendor_id</code> param. See BACKEND_ISSUES.html Issue #4 for full details and fix required.</td></tr>
+        <tr><td>10</td><td>Trip Details</td><td>GET</td><td><code>/trip_details</code></td><td><span class="badge badge-working">Integrated</span></td><td>Full trip info + employee list with OTP. Navigated to from trip cards.</td></tr>
+        <tr><td>11</td><td>Document Details</td><td>GET</td><td><code>/document_details</code></td><td><span class="badge badge-working">Integrated ✅</span></td><td><strong>Confirmed from logs:</strong> Response key is <code>data</code> (not <code>documents</code>). Returns empty array when driver has no uploaded docs yet — expected behaviour.</td></tr>
+        <tr><td>12</td><td>Driver Availability</td><td>GET</td><td><code>/update_vehicleState</code></td><td><span class="badge badge-open">Backend Issue</span></td><td><strong>BACKEND ACTION NEEDED:</strong> API requires <code>v_id</code> (vehicle instance ID from DB), but this ID is never returned to the app. <code>vehicle_insert</code> "already registered" response returns <code>{"code":"1","message":"..."}</code> with no <code>v_id</code>. <strong>Ask backend to:</strong> (1) Return <code>v_id</code> in vehicle_insert response (both success AND "already registered"), OR (2) Allow update_vehicleState to work with <code>d_id</code> alone (driver → vehicle is 1:1). <br/><br/>Client fix: shows snackbar "Vehicle not linked — open Vehicle Registration once" when v_id=0. Sending <code>v_id=0</code> causes "Missing required parameters" so we skip it when 0.</td></tr>
+        <tr><td>13</td><td>Employee Trip OTP</td><td>GET</td><td><code>/trip_otp_verify</code></td><td><span class="badge badge-working">Integrated</span></td><td>Verify dialog on Trip Detail screen. Shows success tick or error inline in dialog. Params: tripID, emp_id, otp, d_id.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 11. PACKAGES ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">11</div>
+      <div class="section-title">Packages Used</div>
+    </div>
+    <table>
+      <thead><tr><th>Package</th><th>Version</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>flutter_bloc</td><td>^8.1.6</td><td>BLoC state management</td></tr>
+        <tr><td>provider</td><td>^6.1.2</td><td>Simple state management (Provider)</td></tr>
+        <tr><td>equatable</td><td>^2.0.5</td><td>BLoC state equality checks</td></tr>
+        <tr><td>dio</td><td>^5.7.0</td><td>HTTP client (multipart, interceptors)</td></tr>
+        <tr><td>shared_preferences</td><td>^2.3.3</td><td>Local key-value storage (token, driver data)</td></tr>
+        <tr><td>image_picker</td><td>^1.1.2</td><td>Pick images for document upload</td></tr>
+        <tr><td>cached_network_image</td><td>^3.4.1</td><td>Profile photo caching</td></tr>
+        <tr><td>go_router</td><td>^14.6.2</td><td>Declarative navigation</td></tr>
+        <tr><td>intl</td><td>^0.19.0</td><td>Date formatting</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 12. BUILD PHASES ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-number">12</div>
+      <div class="section-title">Build Phases</div>
+    </div>
+    <div class="phases">
+      <div class="phase-card done">
+        <div class="phase-label">Phase 1</div>
+        <div class="phase-name">Authentication</div>
+        <div class="phase-apis">APIs: #1 Driver Login, #2 Verify OTP<br/>Screens: Splash, Login, OTP</div>
+        <div class="phase-status done">✅ Complete</div>
+      </div>
+      <div class="phase-card done">
+        <div class="phase-label">Phase 2</div>
+        <div class="phase-name">Dashboard &amp; Profile</div>
+        <div class="phase-apis">APIs: session data<br/>Screens: Dashboard, Profile</div>
+        <div class="phase-status done">✅ Complete</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-label">Phase 3</div>
+        <div class="phase-name">Vehicle Registration</div>
+        <div class="phase-apis">APIs: #6 Types, #8 Contracts, #3 Register<br/>Screens: Vehicle Reg</div>
+        <div class="phase-status todo">Pending</div>
+      </div>
+      <div class="phase-card done">
+        <div class="phase-label">Phase 4</div>
+        <div class="phase-name">Documents</div>
+        <div class="phase-apis">APIs: #4 Names, #5 Upload, #11 Details<br/>Screens: Doc List, Upload</div>
+        <div class="phase-status done">✅ Complete</div>
+      </div>
+      <div class="phase-card done">
+        <div class="phase-label">Phase 5 + 6</div>
+        <div class="phase-name">Trips + Execution</div>
+        <div class="phase-apis">APIs: #9 #10 #12 #13<br/>Screens: Trip List, Detail, OTP verify, Online/Offline</div>
+        <div class="phase-status done">✅ Complete</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+</body>
+</html>
