@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_constants.dart';
+import '../model/driver_model.dart';
 
 // Singleton session wrapper around SharedPreferences.
 // Call AppSession.init() before runApp().
@@ -45,6 +46,30 @@ class AppSession {
     await _prefs.setInt(AppConstants.keyVehicleId, vehicleId);
   }
 
+  // Fleet Engine vehicle ID string (e.g. "vehcile2-corporate_wheels")
+  static String get fleetVehicleId =>
+      _prefs.getString(AppConstants.keyFleetVehicleId) ?? '';
+
+  static bool get isOnline =>
+      _prefs.getBool(AppConstants.keyIsOnline) ?? false;
+
+  static Future<void> saveOnlineState(bool online) async {
+    await _prefs.setBool(AppConstants.keyIsOnline, online);
+  }
+
+  static String get driverData =>
+      _prefs.getString(AppConstants.keyDriverData) ?? '';
+
+  static DriverModel? get driver {
+    final data = driverData;
+    if (data.isEmpty) return null;
+    try {
+      return DriverModel.fromJsonString(data);
+    } catch (e) {
+      return null;
+    }
+  }
+
   static Future<void> saveSession({
     required int userId,
     required int driverId,
@@ -54,6 +79,8 @@ class AppSession {
     required String driverName,
     required String profilePhoto,
     required String driverData,
+    int vehicleId = 0,
+    String fleetVehicleId = '',
   }) async {
     await Future.wait([
       _prefs.setInt(AppConstants.keyUserId, userId),
@@ -64,6 +91,8 @@ class AppSession {
       _prefs.setString(AppConstants.keyDriverName, driverName),
       _prefs.setString(AppConstants.keyProfilePhoto, profilePhoto),
       _prefs.setString(AppConstants.keyDriverData, driverData),
+      _prefs.setInt(AppConstants.keyVehicleId, vehicleId),
+      _prefs.setString(AppConstants.keyFleetVehicleId, fleetVehicleId),
     ]);
   }
 

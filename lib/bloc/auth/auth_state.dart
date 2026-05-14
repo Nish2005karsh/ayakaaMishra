@@ -28,9 +28,14 @@ class AuthOtpSent extends AuthState {
 class AuthAuthenticated extends AuthState {
   final DriverModel driver;
   final String profilePhoto;
-  const AuthAuthenticated({required this.driver, required this.profilePhoto});
+  final int vehicleId;
+  const AuthAuthenticated({
+    required this.driver, 
+    required this.profilePhoto,
+    this.vehicleId = 0,
+  });
   @override
-  List<Object?> get props => [driver.dId];
+  List<Object?> get props => [driver.dId, vehicleId];
 }
 
 class AuthError extends AuthState {

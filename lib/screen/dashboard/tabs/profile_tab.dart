@@ -56,6 +56,10 @@ class _ProfileHeader extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: AppColors.surface)),
               const Spacer(),
+              IconButton(
+                onPressed: () => _showComingSoon(context, 'Edit Profile'),
+                icon: const Icon(Icons.edit_rounded, color: AppColors.primary, size: 20),
+              ),
               const NotificationIcon(),
             ],
           ),
@@ -100,55 +104,156 @@ class _ProfileHeader extends StatelessWidget {
       ),
     );
   }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('$feature — coming soon',
+          style: GoogleFonts.poppins(fontSize: 13)),
+      backgroundColor: AppColors.primaryDark,
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      duration: const Duration(seconds: 2),
+    ));
+  }
 }
 
 // ── INFO SECTION ──────────────────────────────
 class _InfoSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final driver = AppSession.driver;
+    final vehicleId = AppSession.vehicleId;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-                color: AppColors.cardShadow,
-                blurRadius: 8,
-                offset: const Offset(0, 2))
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text('Driver Info',
-                  style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary)),
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                    color: AppColors.cardShadow,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ],
             ),
-            _InfoRow(
-                icon: Icons.badge_rounded,
-                label: 'Driver ID',
-                value: AppSession.driverId.toString()),
-            _InfoRow(
-                icon: Icons.business_rounded,
-                label: 'Company ID',
-                value: AppSession.companyId.toString()),
-            _InfoRow(
-                icon: Icons.group_rounded,
-                label: 'Vendor ID',
-                value: AppSession.vendorId.toString()),
-            _InfoRow(
-                icon: Icons.person_rounded,
-                label: 'User ID',
-                value: AppSession.userId.toString(),
-                isLast: true),
-          ],
-        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text('Driver Information',
+                      style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary)),
+                ),
+                _InfoRow(
+                    icon: Icons.person_rounded,
+                    label: 'Full Name',
+                    value: driver?.driverName ?? 'N/A'),
+                _InfoRow(
+                    icon: Icons.phone_android_rounded,
+                    label: 'Mobile',
+                    value: driver?.driverMobileNo ?? 'N/A'),
+                _InfoRow(
+                    icon: Icons.email_rounded,
+                    label: 'Email',
+                    value: driver?.driverMail ?? 'N/A'),
+                _InfoRow(
+                    icon: Icons.location_city_rounded,
+                    label: 'City',
+                    value: driver?.driverCity ?? 'N/A'),
+                _InfoRow(
+                    icon: Icons.wc_rounded,
+                    label: 'Gender',
+                    value: driver?.driverGender ?? 'N/A'),
+                _InfoRow(
+                    icon: Icons.cake_rounded,
+                    label: 'DOB',
+                    value: driver?.driverDob ?? 'N/A',
+                    isLast: true),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                    color: AppColors.cardShadow,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text('Vehicle Information',
+                      style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary)),
+                ),
+                _InfoRow(
+                    icon: Icons.fingerprint_rounded,
+                    label: 'Vehicle ID',
+                    value: vehicleId > 0 ? '#$vehicleId' : 'Not Linked',
+                    isLast: true),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                    color: AppColors.cardShadow,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2))
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text('Technical IDs',
+                      style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary)),
+                ),
+                _InfoRow(
+                    icon: Icons.badge_rounded,
+                    label: 'Driver ID',
+                    value: AppSession.driverId.toString()),
+                _InfoRow(
+                    icon: Icons.business_rounded,
+                    label: 'Company ID',
+                    value: AppSession.companyId.toString()),
+                _InfoRow(
+                    icon: Icons.group_rounded,
+                    label: 'Vendor ID',
+                    value: AppSession.vendorId.toString()),
+                _InfoRow(
+                    icon: Icons.key_rounded,
+                    label: 'User ID',
+                    value: AppSession.userId.toString(),
+                    isLast: true),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -315,7 +420,6 @@ class _LogoutButton extends StatelessWidget {
       child: GestureDetector(
         onTap: () {
           context.read<AuthBloc>().add(const LogoutRequested());
-          context.go('/login');
         },
         child: Container(
           width: double.infinity,

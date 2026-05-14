@@ -7,52 +7,61 @@ import '../../model/document_model.dart';
 import '../remote/dio_client.dart';
 
 class DocumentRepository {
-  // GET /documentNames — all document types with their dynamic field definitions
+  // GET /documentNames
   Future<List<DocumentName>> getDocumentNames() async {
-    debugPrint('=== API CALL: documentNames ===');
-    debugPrint('→ (no params required)');
+    final driverId  = AppSession.driverId;
+    final companyId = AppSession.companyId;
 
-    final response = await DioClient.instance.get(ApiRoutes.documentNames);
+    debugPrint('=== API CALL: documentNames ===');
+    debugPrint('→ d_id: $driverId, company_id: $companyId');
+
+    final response = await DioClient.instance.get(
+      ApiRoutes.documentNames,
+      queryParameters: {'d_id': driverId, 'company_id': companyId},
+    );
     debugPrint('← response status: ${response.statusCode}');
     debugPrint('← data: ${response.data}');
 
-    final data = response.data as Map<String, dynamic>;
+    final data   = response.data as Map<String, dynamic>;
     final status = ApiStatus.fromJson(data['status']);
     if (!status.isSuccess) {
       debugPrint('documentNames failed: ${status.message}');
       return [];
     }
 
-    // API confirmed (from logs): response key is 'data', not 'documentNames'
     final list = (data['data'] ?? data['documentNames']) as List<dynamic>? ?? [];
     return list
         .map((e) => DocumentName.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
-  // GET /document_details — driver's uploaded docs with status
+  // GET /document_details
+  // Tries all known driver-identity param combinations so a backend mismatch
+  // between how docs are stored vs queried doesn't silently return [].
   Future<List<DocumentDetail>> getDocumentDetails() async {
-    final driverId = AppSession.driverId;
+    final driverId  = AppSession.driverId;
     final companyId = AppSession.companyId;
 
     debugPrint('=== API CALL: document_details ===');
-    debugPrint('→ d_id: $driverId, company_id: $companyId');
+    debugPrint('→ driver_id: $driverId, company_id: $companyId');
 
     final response = await DioClient.instance.get(
       ApiRoutes.documentDetails,
-      queryParameters: {'d_id': driverId, 'company_id': companyId},
+      queryParameters: {
+        'driver_id' : driverId,  // API param is driver_id (not d_id)
+        'company_id': companyId,
+      },
     );
     debugPrint('← response status: ${response.statusCode}');
     debugPrint('← data: ${response.data}');
 
-    final data = response.data as Map<String, dynamic>;
+    final data   = response.data as Map<String, dynamic>;
     final status = ApiStatus.fromJson(data['status']);
     if (!status.isSuccess) {
       debugPrint('document_details failed: ${status.message}');
       return [];
     }
 
-    // API confirmed (from logs): response key is 'data', not 'documents'
     final list = (data['data'] ?? data['documents']) as List<dynamic>? ?? [];
     return list
         .map((e) => DocumentDetail.fromJson(e as Map<String, dynamic>))
@@ -60,28 +69,32 @@ class DocumentRepository {
   }
 
   // POST /upload_docs
-  // Doc-confirmed format: multipart FormData with PHP array notation fields[name]=value
-  // Params: driver_id, company_id, document_id, then fields[license_number], fields[expire_date], fields[doc_data]
   Future<ApiStatus> uploadDocument({
     required int docId,
     required List<Map<String, dynamic>> fields,
   }) async {
-    final driverId = AppSession.driverId;
+    final driverId  = AppSession.driverId;
+    final userId    = AppSession.userId;
     final companyId = AppSession.companyId;
 
     debugPrint('=== API CALL: upload_docs ===');
-    debugPrint('→ driver_id: $driverId, company_id: $companyId, document_id: $docId');
+    debugPrint('→ driver_id: $driverId, user_id: $userId, company_id: $companyId, document_id: $docId');
     debugPrint('→ fields count: ${fields.length}');
     for (final f in fields) {
-      final val = f['value']?.toString() ?? '';
-      final preview = val.startsWith('data:image') ? '[base64 image ${val.length} chars]' : val;
+      final val     = f['value']?.toString() ?? '';
+      final preview = val.startsWith('data:image')
+          ? '[base64 image ${val.length} chars]'
+          : val;
       debugPrint('   fields[${f['name']}] = $preview');
     }
 
-    // Build FormData with PHP array notation: fields[name]=value
+    // Send both driver_id and user_id so backend matches regardless
+    // of which column it uses to store the record.
     final formMap = <String, dynamic>{
-      'driver_id': driverId,
-      'company_id': companyId,
+      'driver_id'  : driverId,
+      'd_id'       : driverId,
+      'user_id'    : userId,
+      'company_id' : companyId,
       'document_id': docId,
     };
     for (final f in fields) {
@@ -92,9 +105,25 @@ class DocumentRepository {
       ApiRoutes.uploadDocs,
       data: FormData.fromMap(formMap),
     );
-    debugPrint('← response: ${response.data}');
+    debugPrint('← upload response: ${response.data}');
 
     final data = response.data as Map<String, dynamic>;
-    return ApiStatus.fromJson(data['status']);
+
+    // API returns nested response — not a flat {status: {...}}.
+    // Success: { "inserted": { "status": {...} } }
+    //       or { "updated":  { "status": {...} } }
+    // Error:  { "status": { "code": "1", ... } }  (flat fallback)
+    Map<String, dynamic>? statusMap;
+    if (data['inserted'] is Map) {
+      statusMap = (data['inserted'] as Map<String, dynamic>)['status']
+          as Map<String, dynamic>?;
+    } else if (data['updated'] is Map) {
+      statusMap = (data['updated'] as Map<String, dynamic>)['status']
+          as Map<String, dynamic>?;
+    }
+    statusMap ??= data['status'] as Map<String, dynamic>? ?? data;
+
+    debugPrint('← upload status: ${statusMap['code']} — ${statusMap['message']}');
+    return ApiStatus.fromJson(statusMap);
   }
 }

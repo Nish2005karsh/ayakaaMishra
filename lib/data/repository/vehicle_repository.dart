@@ -64,39 +64,35 @@ class VehicleRepository {
     required int vehicleTypeId,
     required int contractId,
   }) async {
-    final driverId = AppSession.driverId;
+    final driverId  = AppSession.driverId;
+    final userId    = AppSession.userId;
     final companyId = AppSession.companyId;
-    final vendorId = AppSession.vendorId;
+    final vendorId  = AppSession.vendorId;
 
     debugPrint('=== API CALL: vehicle_insert ===');
-    debugPrint('→ d_id: $driverId, company_id: $companyId, vendor_id: $vendorId');
-    debugPrint('→ v_number: $vehicleNumber, v_name: $vehicleName');
-    debugPrint('→ vehicle_type_id: $vehicleTypeId, contract_id: $contractId');
+    debugPrint('→ user_id: $userId, driver: $driverId, company_id: $companyId');
+    debugPrint('→ registerno: $vehicleNumber, vehicle_type: $vehicleTypeId, contract_id: $contractId');
 
-    // SQL confirmed (from logs): backend column names differ from what we assumed.
-    // vehicle_id = FK to vehicle type (not vehicle_type_id)
-    // registerno = registration number (not v_number)
-    // vehicle_addeBy + driver = d_id of driver adding the vehicle
     final response = await DioClient.instance.post(
       ApiRoutes.vehicleInsert,
       data: {
-        'd_id': driverId,
-        'company_id': companyId,
-        'vendor_id': vendorId,
-        'v_number': vehicleNumber,
-        'registerno': vehicleNumber,
-        'v_name': vehicleName,
-        'vehicle_name': vehicleName,
-        'vehicle_type_id': vehicleTypeId,
-        'vehicle_id': vehicleTypeId,
-        'vehicle_type': vehicleTypeId,
-        'contract_id': contractId,
-        'vehicle_status': 0,
-        'vehicle_addeBy': driverId,
-        'driver': driverId,
-        'garage_name': '',
-        'garage_geo_code': '',
-        'comment': '',
+        'user_id'            : userId,       // API docs require user_id
+        'd_id'               : driverId,
+        'driver'             : driverId,     // API docs: "driver": 2
+        'company_id'         : companyId,
+        'vendor_id'          : vendorId,
+        'registerno'         : vehicleNumber,
+        'v_number'           : vehicleNumber,
+        'v_name'             : vehicleName,
+        'vehicle_name'       : vehicleName,
+        'vehicle_id'         : vehicleTypeId, // API docs: vehicle type id
+        'vehicle_type'       : vehicleTypeId,
+        'vehicle_type_id'    : vehicleTypeId,
+        'contract_id'        : contractId,
+        'vehicle_status'     : '0',
+        'garage_name'        : '',
+        'garage_geo_code'    : '',
+        'comment'            : '',
         'contract_start_date': '',
       },
     );

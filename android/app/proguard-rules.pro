@@ -1,0 +1,5 @@
+-dontwarn com.google.**
+-dontwarn io.grpc.**
+-dontwarn okio.**
+-keep class com.google.android.libraries.navigation.** { *; }
+-keep class com.google.android.libraries.mapsplatform.transportation.** { *; }

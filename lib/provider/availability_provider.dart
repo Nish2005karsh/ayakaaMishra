@@ -1,11 +1,15 @@
 import 'package:flutter/foundation.dart';
 import '../const/app_session.dart';
 import '../data/repository/trip_repository.dart';
+import '../service/fleet_engine_service.dart';
+import '../service/driver_sdk_service.dart';
 
 class AvailabilityProvider extends ChangeNotifier {
   final TripRepository _repo;
 
-  AvailabilityProvider(this._repo);
+  AvailabilityProvider(this._repo) {
+    _isOnline = AppSession.isOnline;
+  }
 
   bool _isOnline = false;
   bool _isLoading = false;
@@ -16,18 +20,6 @@ class AvailabilityProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   Future<void> toggle() async {
-    // Backend requires a valid vehicle_id.
-    // If we don't have one stored, the driver must register a vehicle first.
-    // (BACKEND ISSUE: vehicle_insert "already registered" response does not return v_id.
-    //  Ask backend to include v_id in that response, or add GET /driver_vehicle endpoint.)
-    if (AppSession.vehicleId == 0) {
-      _errorMessage =
-          'Vehicle not linked. Please open Vehicle Registration once to link your vehicle.';
-      debugPrint('=== update_vehicleState blocked: vehicle_id not stored ===');
-      notifyListeners();
-      return;
-    }
-
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -37,7 +29,17 @@ class AvailabilityProvider extends ChangeNotifier {
       final status = await _repo.updateVehicleState(isOnline: newState);
       if (status.isSuccess) {
         _isOnline = newState;
+        await AppSession.saveOnlineState(newState);
         debugPrint('=== Driver is now ${_isOnline ? 'ONLINE' : 'OFFLINE'} ===');
+        if (newState) {
+          FleetEngineService().goOnline();
+          DriverSdkService().setVehicleState(true);
+          DriverSdkService().setLocationTrackingEnabled(true);
+        } else {
+          FleetEngineService().goOffline();
+          DriverSdkService().setLocationTrackingEnabled(false);
+          DriverSdkService().setVehicleState(false);
+        }
       } else {
         _errorMessage = status.message;
         debugPrint('update_vehicleState failed: ${status.message}');
@@ -49,5 +51,10 @@ class AvailabilityProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
   }
 }

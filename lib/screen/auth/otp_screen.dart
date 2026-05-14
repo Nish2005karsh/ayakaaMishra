@@ -74,8 +74,12 @@ class _OtpScreenState extends State<OtpScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          // Navigate to vehicle registration on first login
-          context.go('/vehicle-registration');
+          // Skip vehicle registration if vehicle_id is already linked
+          if (state.vehicleId > 0) {
+            context.go('/dashboard');
+          } else {
+            context.go('/vehicle-registration');
+          }
         } else if (state is AuthOtpSent) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -104,7 +108,9 @@ class _OtpScreenState extends State<OtpScreen> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary, size: 20),
-            onPressed: () => context.pop(),
+            onPressed: () => context.canPop()
+                ? context.pop()
+                : context.go('/login'),
           ),
         ),
         body: SafeArea(

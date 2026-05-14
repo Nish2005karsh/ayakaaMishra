@@ -12,6 +12,9 @@ import '../../../const/app_colors.dart';
 import '../../../const/app_session.dart';
 import '../../../model/trip_model.dart';
 import '../../../provider/availability_provider.dart';
+import '../../../provider/dashboard_provider.dart';
+import '../../../bloc/auth/auth_bloc.dart';
+import '../../../bloc/auth/auth_event.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -49,6 +52,7 @@ class _HomeTabState extends State<HomeTab> {
                   borderRadius: BorderRadius.circular(10)),
               duration: const Duration(seconds: 4),
             ));
+            availability.clearError();
           }
         });
 
@@ -174,9 +178,12 @@ class _Header extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.notifications_outlined,
+                onPressed: () {
+                  context.read<AuthBloc>().add(const LogoutRequested());
+                },
+                icon: const Icon(Icons.logout_rounded,
                     color: AppColors.surface),
+                tooltip: 'Logout',
               ),
             ],
           ),
@@ -368,12 +375,12 @@ class _QuickActions extends StatelessWidget {
             _ActionTile(
               icon: Icons.folder_rounded,
               label: 'My Documents',
-              onTap: () => _showTabHint(context, 'Documents'),
+              onTap: () => context.read<DashboardProvider>().setIndex(2),
             ),
             _ActionTile(
               icon: Icons.history_rounded,
               label: 'Trip History',
-              onTap: () => _showTabHint(context, 'Trips'),
+              onTap: () => context.read<DashboardProvider>().setIndex(1),
             ),
             _ActionTile(
               icon: Icons.headset_mic_rounded,
@@ -384,17 +391,6 @@ class _QuickActions extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  void _showTabHint(BuildContext context, String tab) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Tap the $tab tab at the bottom to navigate',
-          style: GoogleFonts.poppins(fontSize: 13)),
-      backgroundColor: AppColors.primaryDark,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
   }
 
   void _showComingSoon(BuildContext context, String feature) {
@@ -477,17 +473,8 @@ class _UpcomingSection extends StatelessWidget {
                     color: AppColors.textPrimary)),
             const Spacer(),
             TextButton(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Tap the Trips tab at the bottom',
-                      style: GoogleFonts.poppins(fontSize: 13)),
-                  backgroundColor: AppColors.primaryDark,
-                  behavior: SnackBarBehavior.floating,
-                  margin: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
+              onPressed: () =>
+                  context.read<DashboardProvider>().setIndex(1),
               child: Text('View all',
                   style: GoogleFonts.poppins(
                       fontSize: 12,
@@ -628,6 +615,7 @@ class _TripsShimmer extends StatelessWidget {
           2,
           (_) => Container(
             margin: const EdgeInsets.only(bottom: 10),
+            width: double.infinity,
             height: 72,
             decoration: BoxDecoration(
               color: AppColors.shimmer,

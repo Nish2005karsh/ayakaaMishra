@@ -42,6 +42,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(
           driver: result.driver!,
           profilePhoto: result.profilePhoto,
+          vehicleId: result.vehicleId,
         ));
       } else {
         emit(AuthError(result.status.message));

@@ -1,10 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:provider/provider.dart';
 import 'bloc/auth/auth_bloc.dart';
+import 'bloc/auth/auth_state.dart';
 import 'bloc/document/document_bloc.dart';
 import 'bloc/trip/trip_bloc.dart';
 import 'const/app_colors.dart';
@@ -17,18 +18,30 @@ import 'data/repository/vehicle_repository.dart';
 import 'model/document_model.dart';
 import 'model/trip_model.dart';
 import 'provider/availability_provider.dart';
+import 'provider/dashboard_provider.dart';
 import 'provider/vehicle_provider.dart';
+import 'screen/documents/document_preview_screen.dart';
 import 'screen/auth/login_screen.dart';
 import 'screen/auth/otp_screen.dart';
 import 'screen/dashboard/dashboard_screen.dart';
 import 'screen/documents/document_upload_screen.dart';
 import 'screen/splash/splash_screen.dart';
 import 'screen/trips/trip_detail_screen.dart';
+import 'screen/trips/trip_navigation_screen.dart';
 import 'screen/vehicle/vehicle_registration_screen.dart';
+import 'service/driver_sdk_service.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppSession.init();
+  
+  // Driver SDK is initialized after login in auth_repository.dart.
+  // Wire the token callback here so it's ready on app restart.
+  if (!kIsWeb) {
+    DriverSdkService().onTokenRequested = (_) async => AppSession.accessToken;
+  }
+
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -53,7 +66,8 @@ final _router = GoRouter(
     GoRoute(
       path: '/otp',
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>;
+        final extra = state.extra as Map<String, dynamic>?;
+        if (extra == null) return const LoginScreen();
         return OtpScreen(
           userId: extra['userId'] as int,
           mobile: extra['mobile'] as String,
@@ -71,7 +85,8 @@ final _router = GoRouter(
     GoRoute(
       path: '/documents/upload',
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>;
+        final extra = state.extra as Map<String, dynamic>?;
+        if (extra == null) return const DashboardScreen();
         return DocumentUploadScreen(
           docId: extra['docId'] as int,
           docName: extra['docName'] as String,
@@ -81,8 +96,30 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/trips/detail',
-      builder: (context, state) =>
-          TripDetailScreen(trip: state.extra as TripModel),
+      builder: (context, state) {
+        final trip = state.extra as TripModel?;
+        if (trip == null) return const DashboardScreen();
+        return TripDetailScreen(trip: trip);
+      },
+    ),
+    GoRoute(
+      path: '/trips/navigate',
+      builder: (context, state) {
+        final trip = state.extra as TripModel?;
+        if (trip == null) return const DashboardScreen();
+        return TripNavigationScreen(trip: trip);
+      },
+    ),
+    GoRoute(
+      path: '/documents/preview',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        if (extra == null) return const DashboardScreen();
+        return DocumentPreviewScreen(
+          imageUrl: extra['imageUrl'] as String,
+          docName: extra['docName'] as String,
+        );
+      },
     ),
   ],
 );
@@ -94,6 +131,7 @@ class AyakaaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(
           create: (_) => VehicleProvider(VehicleRepository()),
         ),
@@ -113,11 +151,18 @@ class AyakaaApp extends StatelessWidget {
             create: (_) => TripBloc(TripRepository()),
           ),
         ],
-        child: MaterialApp.router(
-          title: AppConstants.appName,
-          debugShowCheckedModeBanner: false,
-          routerConfig: _router,
-          theme: _buildTheme(),
+        child: BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is AuthUnauthenticated) {
+              _router.go('/login');
+            }
+          },
+          child: MaterialApp.router(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            routerConfig: _router,
+            theme: _buildTheme(),
+          ),
         ),
       ),
     );

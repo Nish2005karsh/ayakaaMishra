@@ -45,6 +45,10 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     for (final f in widget.fields) {
       _values[f.name] = '';
     }
+    // If the API didn't provide a file field, add a default one
+    if (!widget.fields.any((f) => f.type == 'file')) {
+      _values['doc_data'] = '';
+    }
   }
 
   Future<void> _pickImage(String fieldName) async {
@@ -101,11 +105,25 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       }
     }
 
+    // Block submission if ALL fields are empty — prevents accidental silent uploads
+    final allEmpty = _values.values.every((v) => v.isEmpty);
+    if (allEmpty && widget.fields.isNotEmpty) {
+      _showSnack('Please fill in at least one field before uploading.',
+          isError: true);
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     final fields = widget.fields
         .map((f) => {'name': f.name, 'value': _values[f.name] ?? ''})
         .toList();
+
+    // Include the auto-added doc_data file field if it was picked
+    if (!widget.fields.any((f) => f.type == 'file') &&
+        (_values['doc_data']?.isNotEmpty ?? false)) {
+      fields.add({'name': 'doc_data', 'value': _values['doc_data']!});
+    }
 
     try {
       final status = await _repo.uploadDocument(
@@ -120,7 +138,13 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         // Refresh documents list in the parent BLoC
         context.read<DocumentBloc>().add(const RefreshDocuments());
         await Future.delayed(const Duration(milliseconds: 600));
-        if (mounted) context.pop();
+        if (mounted) {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/dashboard');
+          }
+        }
       } else {
         _showSnack(status.message, isError: true);
       }
@@ -156,10 +180,16 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.fields.isEmpty)
+                    if (widget.fields.isEmpty &&
+                        widget.fields.any((f) => f.type == 'file'))
                       _EmptyFields()
                     else ...[
                       ...widget.fields.map((f) => _buildField(f)),
+                      // If API has no file field, show a default document image picker
+                      if (!widget.fields.any((f) => f.type == 'file')) ...[
+                        const SizedBox(height: 4),
+                        _buildDefaultFileField(),
+                      ],
                       const SizedBox(height: 32),
                       _SubmitButton(
                         isLoading: _isSubmitting,
@@ -184,7 +214,9 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => context.pop(),
+            onTap: () => context.canPop()
+                ? context.pop()
+                : context.go('/dashboard'),
             child: Container(
               width: 36,
               height: 36,
@@ -263,6 +295,29 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                 label: field.label,
               ),
           },
+        ],
+      ),
+    );
+  }
+
+  // Default file picker shown when the API provides no file field for this doc
+  Widget _buildDefaultFileField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Document Image',
+              style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary)),
+          const SizedBox(height: 8),
+          _FileField(
+            fieldName: 'doc_data',
+            filePath: _filePaths['doc_data'],
+            onPick: () => _pickImage('doc_data'),
+          ),
         ],
       ),
     );

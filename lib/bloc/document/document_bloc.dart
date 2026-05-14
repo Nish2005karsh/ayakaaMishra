@@ -19,34 +19,34 @@ class DocumentBloc extends Bloc<DocumentEvent, DocumentState> {
   }
 
   Future<void> _onRefresh(RefreshDocuments event, Emitter<DocumentState> emit) async {
-    // Keep current state visible while refreshing
     await _fetch(emit);
   }
 
   Future<void> _fetch(Emitter<DocumentState> emit) async {
     try {
-      // Parallel fetch: all doc types + driver's uploaded docs
       final results = await Future.wait([
         _repo.getDocumentNames(),
         _repo.getDocumentDetails(),
       ]);
 
-      final docNames = results[0] as List<DocumentName>;
+      final docNames   = results[0] as List<DocumentName>;
       final docDetails = results[1] as List<DocumentDetail>;
 
-      // Map detail by docId for quick lookup
+      debugPrint('=== documentNames: ${docNames.length}, document_details: ${docDetails.length} ===');
+
+      // Primary lookup: by docId from document_details
       final detailMap = {for (final d in docDetails) d.docId: d};
 
-      // Merge: every document type gets its upload status
       final items = docNames.map((name) {
-        return DocumentItem(
-          name: name,
-          detail: detailMap[name.docId],
-        );
+        DocumentDetail? detail = detailMap[name.docId];
+
+        return DocumentItem(name: name, detail: detail);
       }).toList();
 
       final uploaded = items
-          .where((i) => i.status == DocumentStatus.approved || i.status == DocumentStatus.pending)
+          .where((i) =>
+              i.status == DocumentStatus.approved ||
+              i.status == DocumentStatus.pending)
           .length;
 
       debugPrint('=== Documents loaded: ${items.length} types, $uploaded uploaded ===');

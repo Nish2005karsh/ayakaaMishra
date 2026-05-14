@@ -260,7 +260,8 @@ class _DocCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: _statusColor)),
               ),
-              if (item.canUpload) ...[
+              // Upload for missing/pending/rejected, Re-upload for approved
+              ...[
                 const SizedBox(height: 6),
                 GestureDetector(
                   onTap: () => context.push('/documents/upload', extra: {
@@ -270,14 +271,46 @@ class _DocCard extends StatelessWidget {
                   }),
                   child: Row(
                     children: [
-                      Text('Upload',
+                      Text(
+                        item.status == DocumentStatus.approved
+                            ? 'Re-upload'
+                            : 'Upload',
+                        style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: item.status == DocumentStatus.approved
+                                ? AppColors.textSecondary
+                                : AppColors.primaryDark),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(Icons.arrow_forward_ios_rounded,
+                          size: 10,
+                          color: item.status == DocumentStatus.approved
+                              ? AppColors.textSecondary
+                              : AppColors.primaryDark),
+                    ],
+                  ),
+                ),
+              ],
+              // View button — shown for ANY doc that has a file path,
+              // including expired (rejected) ones so driver can still see it.
+              if (item.detail?.fullImageUrl != null) ...[
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: () => context.push('/documents/preview', extra: {
+                    'imageUrl': item.detail!.fullImageUrl!,
+                    'docName': item.name.docName,
+                  }),
+                  child: Row(
+                    children: [
+                      Text('View',
                           style: GoogleFonts.poppins(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: AppColors.primaryDark)),
                       const SizedBox(width: 2),
-                      const Icon(Icons.arrow_forward_ios_rounded,
-                          size: 10, color: AppColors.primaryDark),
+                      const Icon(Icons.visibility_rounded,
+                          size: 11, color: AppColors.primaryDark),
                     ],
                   ),
                 ),

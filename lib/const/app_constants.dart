@@ -10,7 +10,9 @@ class AppConstants {
   static const String keyDriverData = 'driver_data';
   static const String keyDriverName = 'driver_name';
   static const String keyProfilePhoto = 'profile_photo';
-  static const String keyVehicleId = 'vehicle_id'; // stored after vehicle_insert
+  static const String keyVehicleId      = 'vehicle_id';       // DB integer vehicle id
+  static const String keyFleetVehicleId = 'fleet_vehicle_id'; // Fleet Engine string vehicle id
+  static const String keyIsOnline       = 'is_online';        // persisted across launches
 
   // TEAM NOTE (see DECISIONS.md §5): company_id comes from driver.driver_company
   // in the OTP verify response. Fallback 5 matches API example default.

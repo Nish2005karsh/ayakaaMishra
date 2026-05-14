@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../const/app_colors.dart';
-import '../../data/repository/trip_repository.dart';
 import '../../model/trip_model.dart';
+import '../../widget/custom_button.dart';
+import '../../widget/trip_otp_dialog.dart';
 
 class TripDetailScreen extends StatelessWidget {
   final TripModel trip;
@@ -11,6 +12,9 @@ class TripDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canNavigate = trip.status == TripStatus.upcoming ||
+        trip.status == TripStatus.ongoing;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
@@ -23,6 +27,11 @@ class TripDetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _InfoCard(trip: trip),
+                  // Navigate button — visible for upcoming / ongoing trips
+                  if (canNavigate) ...[
+                    const SizedBox(height: 16),
+                    _NavigateButton(trip: trip),
+                  ],
                   const SizedBox(height: 20),
                   _EmployeeSection(trip: trip),
                 ],
@@ -35,13 +44,31 @@ class TripDetailScreen extends StatelessWidget {
   }
 }
 
+// ── NAVIGATE BUTTON ───────────────────────────
+class _NavigateButton extends StatelessWidget {
+  final TripModel trip;
+  const _NavigateButton({required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomButton(
+      label: 'Start Navigation',
+      icon: const Icon(Icons.navigation_rounded,
+          size: 18, color: AppColors.primaryDark),
+      onTap: () => context.push('/trips/navigate', extra: trip),
+    );
+  }
+}
+
 // ── DARK HEADER ──────────────────────────────
 class _Header extends StatelessWidget {
   final TripModel trip;
   const _Header({required this.trip});
 
   Color get _dirColor =>
-      trip.direction.toLowerCase() == 'login' ? AppColors.success : AppColors.error;
+      trip.direction.toLowerCase() == 'login'
+          ? AppColors.success
+          : AppColors.error;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +82,9 @@ class _Header extends StatelessWidget {
           Row(
             children: [
               GestureDetector(
-                onTap: () => context.pop(),
+                onTap: () => context.canPop()
+                    ? context.pop()
+                    : context.go('/dashboard'),
                 child: Container(
                   width: 36,
                   height: 36,
@@ -86,7 +115,8 @@ class _Header extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _dirColor.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _dirColor.withValues(alpha: 0.5)),
+                  border:
+                      Border.all(color: _dirColor.withValues(alpha: 0.5)),
                 ),
                 child: Text(trip.direction.toUpperCase(),
                     style: GoogleFonts.poppins(
@@ -96,11 +126,16 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(trip.officeName,
-                    style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.surface)),
+                child: Text(
+                  trip.officeName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.surface,
+                      height: 1.3),
+                ),
               ),
             ],
           ),
@@ -220,18 +255,20 @@ class _DetailRow extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: AppColors.textSecondary),
         const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label,
-                style: GoogleFonts.poppins(
-                    fontSize: 10, color: AppColors.textSecondary)),
-            Text(value,
-                style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary)),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: GoogleFonts.poppins(
+                      fontSize: 10, color: AppColors.textSecondary)),
+              Text(value,
+                  style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary)),
+            ],
+          ),
         ),
       ],
     );
@@ -340,7 +377,15 @@ class _EmployeeCard extends StatelessWidget {
           if (canVerify) ...[
             const SizedBox(width: 10),
             GestureDetector(
-              onTap: () => _showOtpDialog(context),
+              onTap: () => showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => TripOtpDialog(
+                  empName: emp.empName,
+                  tripId: tripId,
+                  empId: emp.empId,
+                ),
+              ),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -358,242 +403,6 @@ class _EmployeeCard extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-
-  void _showOtpDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _OtpDialog(
-        empName: emp.empName,
-        tripId: tripId,
-        empId: emp.empId,
-      ),
-    );
-  }
-}
-
-// ── OTP VERIFY DIALOG ─────────────────────────
-class _OtpDialog extends StatefulWidget {
-  final String empName;
-  final String tripId;
-  final int empId;
-  const _OtpDialog(
-      {required this.empName, required this.tripId, required this.empId});
-
-  @override
-  State<_OtpDialog> createState() => _OtpDialogState();
-}
-
-class _OtpDialogState extends State<_OtpDialog> {
-  final _repo = TripRepository();
-  final _ctrl = TextEditingController();
-  bool _isLoading = false;
-  String? _error;
-  bool _verified = false;
-
-  Future<void> _verify() async {
-    final otp = _ctrl.text.trim();
-    if (otp.isEmpty) {
-      setState(() => _error = 'Please enter the OTP');
-      return;
-    }
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final status = await _repo.verifyTripOtp(
-        tripId: widget.tripId,
-        empId: widget.empId,
-        otp: otp,
-      );
-      if (!mounted) return;
-      if (status.isSuccess) {
-        setState(() => _verified = true);
-      } else {
-        setState(() => _error = status.message);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(
-            () => _error = 'Network error. Check your connection.');
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: AppColors.surface,
-      contentPadding: const EdgeInsets.all(24),
-      content: _verified ? _SuccessContent(empName: widget.empName) : Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.verified_user_rounded,
-                    color: AppColors.primaryDark, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Verify OTP',
-                        style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary)),
-                    Text(widget.empName,
-                        style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: AppColors.textSecondary)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text('Enter the OTP shown by the passenger:',
-              style: GoogleFonts.poppins(
-                  fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _ctrl,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 4,
-                color: AppColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: '------',
-              hintStyle: GoogleFonts.poppins(
-                  color: AppColors.border, fontSize: 22, letterSpacing: 4),
-              filled: true,
-              fillColor: AppColors.background,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppColors.border)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppColors.border)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                      color: AppColors.primaryDark, width: 2)),
-              errorText: _error,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text('Cancel',
-                      style: GoogleFonts.poppins(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _verify,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    disabledBackgroundColor:
-                        AppColors.primary.withValues(alpha: 0.6),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 18, height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.primaryDark))
-                      : Text('Verify',
-                          style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryDark)),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SuccessContent extends StatelessWidget {
-  final String empName;
-  const _SuccessContent({required this.empName});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 64, height: 64,
-          decoration: BoxDecoration(
-              color: AppColors.success.withValues(alpha: 0.12),
-              shape: BoxShape.circle),
-          child: const Icon(Icons.check_circle_rounded,
-              color: AppColors.success, size: 36),
-        ),
-        const SizedBox(height: 16),
-        Text('OTP Verified!',
-            style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary)),
-        const SizedBox(height: 6),
-        Text('$empName has been verified',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-                fontSize: 13, color: AppColors.textSecondary)),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            child: Text('Done',
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w700, color: AppColors.surface)),
-          ),
-        ),
-      ],
     );
   }
 }
