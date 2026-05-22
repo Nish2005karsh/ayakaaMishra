@@ -26,6 +26,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Forces Navigation SDK to use the GMS Cronet provider instead of the
+        // fallback JavaCronetEngine (which can't authenticate → Nav SDK error 4).
+        manifestPlaceholders["cronetProviderPackage"] = "com.google.android.gms"
     }
 
     buildTypes {
@@ -41,7 +44,12 @@ android {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.0.4")
-    // transportation-driver requires Google Mobility Services approval to download.
+    implementation("com.google.android.libraries.mapsplatform.transportation:transportation-driver:6.0.0")
+    implementation("com.google.android.libraries.navigation:navigation:5.0.0")
+    // KEY FIX: GMS Cronet provider. Without this, Navigation SDK falls back
+    // to JavaCronetEngine which cannot authenticate → "Navigation SDK error: 4".
+    // (Confirmed by the client's reference app having the same fix.)
+    implementation("com.google.android.gms:play-services-cronet:18.1.0")
 }
 
 flutter {

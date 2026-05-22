@@ -32,13 +32,31 @@ class AvailabilityProvider extends ChangeNotifier {
         await AppSession.saveOnlineState(newState);
         debugPrint('=== Driver is now ${_isOnline ? 'ONLINE' : 'OFFLINE'} ===');
         if (newState) {
+          // If the SDK failed to initialize at app start (e.g. location
+          // permission wasn't granted yet) the calls below would silently
+          // no-op because VehicleReporter is null. Retry init once here
+          // — by now the user has interacted with the app and permissions
+          // should be granted.
+          final ok1 = await DriverSdkService().setLocationTrackingEnabled(true);
+          if (!ok1) {
+            final fleetVehicleId = AppSession.fleetVehicleId;
+            if (fleetVehicleId.isNotEmpty) {
+              debugPrint('Driver SDK not ready, re-initializing before online toggle');
+              await DriverSdkService().initialize(
+                providerId: 'ayaka-transassist-mobility',
+                vehicleId: fleetVehicleId,
+              );
+              await DriverSdkService().setLocationTrackingEnabled(true);
+            }
+          }
+          // CRITICAL: enableLocationTracking MUST be called BEFORE setVehicleState(ONLINE)
+          // per Google docs, otherwise IllegalStateException → location appears static.
+          await DriverSdkService().setVehicleState(true);
           FleetEngineService().goOnline();
-          DriverSdkService().setVehicleState(true);
-          DriverSdkService().setLocationTrackingEnabled(true);
         } else {
+          await DriverSdkService().setVehicleState(false);
+          await DriverSdkService().setLocationTrackingEnabled(false);
           FleetEngineService().goOffline();
-          DriverSdkService().setLocationTrackingEnabled(false);
-          DriverSdkService().setVehicleState(false);
         }
       } else {
         _errorMessage = status.message;

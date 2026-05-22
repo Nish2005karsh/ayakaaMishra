@@ -42,13 +42,27 @@ class _TripNavigationScreenState extends State<TripNavigationScreen> {
   bool get _isLastWaypoint =>
       _completedWaypoints >= _allWaypoints.length - 1;
 
-  // Matched passenger for current arrived waypoint
-  PickupDrop? get _arrivedPassenger {
-    if (_arrivedWaypoint == null) return null;
-    final idx = _completedWaypoints.clamp(0, widget.trip.pickupDrops.length - 1);
-    return widget.trip.pickupDrops.isNotEmpty
-        ? widget.trip.pickupDrops[idx]
-        : null;
+  // Maps a waypoint back to its passenger by matching the title (employee name).
+  // Returns null when the waypoint is the office (not a passenger).
+  PickupDrop? _passengerForWaypoint(NavigationWaypoint? wp) {
+    if (wp == null) return null;
+    final title = wp.title;
+    if (title.isEmpty) return null;
+    for (final emp in widget.trip.pickupDrops) {
+      if (emp.empName == title) return emp;
+    }
+    return null;
+  }
+
+  PickupDrop? get _arrivedPassenger => _passengerForWaypoint(_arrivedWaypoint);
+
+  // Next passenger stop based on what's been completed. Skips the office
+  // waypoint (LOGOUT's first stop, LOGIN's last stop).
+  PickupDrop? get _nextPassengerStop {
+    final isLogin = widget.trip.direction.toLowerCase() == 'login';
+    final empIdx = isLogin ? _completedWaypoints : _completedWaypoints - 1;
+    if (empIdx < 0 || empIdx >= widget.trip.pickupDrops.length) return null;
+    return widget.trip.pickupDrops[empIdx];
   }
 
   @override
@@ -110,6 +124,19 @@ class _TripNavigationScreenState extends State<TripNavigationScreen> {
 
   List<NavigationWaypoint> _buildWaypoints() {
     final waypoints = <NavigationWaypoint>[];
+    final isLogin = widget.trip.direction.toLowerCase() == 'login';
+    final officeLatLng = _parseLatLng(widget.trip.officeLocation);
+
+    // LOGOUT: office first (driver picks up FROM office),
+    //         then drop each employee at home.
+    if (!isLogin && officeLatLng != null) {
+      waypoints.add(NavigationWaypoint.withLatLngTarget(
+        title: widget.trip.officeName.isNotEmpty ? widget.trip.officeName : 'Office',
+        target: officeLatLng,
+      ));
+    }
+
+    // Employee pickup/drop stops.
     for (final emp in widget.trip.pickupDrops) {
       final latLng = _parseLatLng(emp.empGeocode);
       if (latLng != null) {
@@ -119,6 +146,15 @@ class _TripNavigationScreenState extends State<TripNavigationScreen> {
         ));
       }
     }
+
+    // LOGIN: drop everyone at OFFICE at the end.
+    if (isLogin && officeLatLng != null) {
+      waypoints.add(NavigationWaypoint.withLatLngTarget(
+        title: widget.trip.officeName.isNotEmpty ? widget.trip.officeName : 'Office',
+        target: officeLatLng,
+      ));
+    }
+
     return waypoints;
   }
 
@@ -128,6 +164,14 @@ class _TripNavigationScreenState extends State<TripNavigationScreen> {
     if (waypoints.isEmpty) {
       _showSnack('No GPS coordinates found for passengers on this trip.');
       return;
+    }
+
+    // Print the planned route so QA / the driver can sanity-check direction
+    // (LOGIN: employees → office; LOGOUT: office → employees) from logcat.
+    debugPrint('Trip ${widget.trip.tripId} direction=${widget.trip.direction}');
+    for (int i = 0; i < waypoints.length; i++) {
+      final wp = waypoints[i];
+      debugPrint('  Stop ${i + 1}: ${wp.title} @ ${wp.target?.latitude},${wp.target?.longitude}');
     }
 
     setState(() => _isSettingRoute = true);
@@ -147,7 +191,9 @@ class _TripNavigationScreenState extends State<TripNavigationScreen> {
 
         // ── Subscribe to arrival events ────────────────────────────────────
         _arrivalSub = GoogleMapsNavigator.setOnArrivalListener((event) {
-          final passenger = _arrivedPassenger;
+          // Match passenger from the EVENT (not state — state hasn't been
+          // updated yet). Office arrivals return null → no API call.
+          final passenger = _passengerForWaypoint(event.waypoint);
           if (passenger != null) {
             TripRepository().recordArrival(
               tripId: widget.trip.tripId,
@@ -189,11 +235,11 @@ class _TripNavigationScreenState extends State<TripNavigationScreen> {
 
   void _checkProximity(Position pos) {
     if (!_isNavigating) return;
+    final nextStop = _nextPassengerStop;
+    if (nextStop == null) return; // heading to office, no employee proximity needed
     final nextIndex = _completedWaypoints;
-    if (nextIndex >= widget.trip.pickupDrops.length) return;
     if (_proximityTriggered.contains(nextIndex)) return;
 
-    final nextStop = widget.trip.pickupDrops[nextIndex];
     final parts = nextStop.empGeocode.split(',');
     if (parts.length != 2) return;
     final lat = double.tryParse(parts[0].trim());
@@ -224,15 +270,13 @@ class _TripNavigationScreenState extends State<TripNavigationScreen> {
     await GoogleMapsNavigator.continueToNextDestination();
     if (mounted) setState(() => _completedWaypoints++);
 
-    // Sync next destination with Fleet Engine
-    final remaining = widget.trip.pickupDrops
-        .skip(_completedWaypoints)
-        .map((e) => _parseLatLng(e.empGeocode))
-        .whereType<LatLng>()
-        .toList();
+    // Sync next destination with Fleet Engine — use _nextPassengerStop so we
+    // skip the office waypoint correctly for LOGIN/LOGOUT.
+    final next = _nextPassengerStop;
+    final nextLatLng = next != null ? _parseLatLng(next.empGeocode) : null;
     FleetEngineService().advanceToWaypoint(
-      remaining.isNotEmpty
-          ? {'lat': remaining.first.latitude, 'lng': remaining.first.longitude}
+      nextLatLng != null
+          ? {'lat': nextLatLng.latitude, 'lng': nextLatLng.longitude}
           : null,
     );
   }
@@ -243,6 +287,15 @@ class _TripNavigationScreenState extends State<TripNavigationScreen> {
     await GoogleMapsNavigator.stopGuidance();
     FleetEngineService().endTrip();
     _arrivalSub?.cancel();
+
+    // Mark the trip completed on the backend so the admin panel moves it
+    // out of "ongoing". Fire-and-forget — failure is non-fatal, the local
+    // UI still flips to the completion screen.
+    final status = await TripRepository().completeTrip(tripId: widget.trip.tripId);
+    if (!status.isSuccess) {
+      debugPrint('trip_complete API returned non-success: ${status.message}');
+    }
+
     if (mounted) {
       setState(() {
         _arrivedWaypoint = null;
@@ -301,6 +354,7 @@ class _TripNavigationScreenState extends State<TripNavigationScreen> {
   @override
   void dispose() {
     _arrivalSub?.cancel();
+    _proximitySub?.cancel();
     if (_sessionInitialized) GoogleMapsNavigator.cleanup();
     super.dispose();
   }

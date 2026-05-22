@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,16 +30,35 @@ import 'screen/trips/trip_detail_screen.dart';
 import 'screen/trips/trip_navigation_screen.dart';
 import 'screen/vehicle/vehicle_registration_screen.dart';
 import 'service/driver_sdk_service.dart';
-
+import 'service/driver_token_cache.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppSession.init();
-  
-  // Driver SDK is initialized after login in auth_repository.dart.
-  // Wire the token callback here so it's ready on app restart.
+
   if (!kIsWeb) {
-    DriverSdkService().onTokenRequested = (_) async => AppSession.accessToken;
+    DriverSdkService().onTokenRequested = DriverTokenCache.fetch;
+    final fleetVehicleId = AppSession.fleetVehicleId;
+    if (fleetVehicleId.isNotEmpty) {
+      try {
+        final ok = await DriverSdkService().initialize(
+          providerId: 'ayaka-transassist-mobility',
+          vehicleId: fleetVehicleId,
+        );
+        debugPrint('Driver SDK: app-start initialize result: $ok (vehicleId=$fleetVehicleId)');
+        // If init succeeded AND the user was previously online (e.g. session
+        // restored after app restart), re-apply the SDK state so location
+        // tracking actually flows to Fleet Engine. Without this, the user
+        // would have to manually toggle offline → online to activate the SDK.
+        if (ok && AppSession.isOnline) {
+          await DriverSdkService().setLocationTrackingEnabled(true);
+          await DriverSdkService().setVehicleState(true);
+          debugPrint('Driver SDK: restored ONLINE state after app start');
+        }
+      } catch (e) {
+        debugPrint('Driver SDK: app-start init skipped: $e');
+      }
+    }
   }
 
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);

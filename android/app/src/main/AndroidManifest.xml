@@ -6,6 +6,7 @@
     <!-- Location — required by geolocator + Google Navigation SDK -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
 
     <!-- Foreground service — Navigation SDK runs as a foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>

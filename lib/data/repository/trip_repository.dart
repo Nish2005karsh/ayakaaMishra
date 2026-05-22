@@ -204,6 +204,33 @@ class TripRepository {
     }
   }
 
+  // POST /trip_complete
+  // Called after the driver finishes the last waypoint. Flips trip_status
+  // on the backend so the admin panel moves the trip out of "ongoing".
+  Future<ApiStatus> completeTrip({required String tripId}) async {
+    final companyId = AppSession.companyId;
+    final driverId = AppSession.driverId;
+    debugPrint('=== API CALL: trip_complete ===');
+    debugPrint('→ trip_id: $tripId, company_id: $companyId, driver_id: $driverId');
+    try {
+      final response = await DioClient.instance.post(
+        ApiRoutes.tripComplete,
+        data: {
+          'trip_id': tripId,
+          'company_id': companyId,
+          'driver_id': driverId,
+          'completed_time': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
+      debugPrint('← trip_complete: ${response.data}');
+      final data = response.data as Map<String, dynamic>;
+      return ApiStatus.fromJson(data['status'] ?? data);
+    } catch (e) {
+      debugPrint('trip_complete failed: $e');
+      return const ApiStatus(code: '1', message: 'Failed to mark trip complete');
+    }
+  }
+
   // GET /update_vehicleState
   // Doc-confirmed params: company_id, vehicle_id, vehicle_status
   // NOTE: vehicle_id must be obtained from /vehicle_insert response.

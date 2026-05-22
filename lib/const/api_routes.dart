@@ -33,4 +33,7 @@ class ApiRoutes {
 
   // Live location — driver sends GPS when ONLINE to relay to Fleet Engine
   static const String updateDriverLocation = '$_base/update_driver_location';
+
+  // Trip completion — flips trip_status so admin panel moves it to "completed"
+  static const String tripComplete = '$_base/trip_complete';
 }

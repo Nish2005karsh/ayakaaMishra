@@ -5,6 +5,7 @@ import '../../model/api_response_model.dart';
 import '../../model/driver_model.dart';
 import '../remote/dio_client.dart';
 import '../../service/driver_sdk_service.dart';
+import '../../service/driver_token_cache.dart';
 
 class AuthRepository {
   Future<({int userId, ApiStatus status})> driverLogin(String mobile) async {
@@ -45,6 +46,7 @@ class AuthRepository {
     }
 
     final driverJson = data['driver'] as Map<String, dynamic>;
+    debugPrint('DEBUG: Full Driver JSON: $driverJson');
     final driver = DriverModel.fromJson(driverJson);
     final token = data['access_token']?.toString() ?? '';
     final photo = data['profile_photo']?.toString() ?? '';
@@ -78,15 +80,20 @@ class AuthRepository {
       fleetVehicleId: fleetVehicleId,
     );
 
-    // Driver SDK — Android only, only when vehicle is linked.
-    if (!kIsWeb && vehicleId > 0) {
+    debugPrint('Provider ID: ayaka-transassist-mobility');
+    debugPrint('Fleet Vehicle ID: $fleetVehicleId');
+    debugPrint('DB Vehicle ID: $vehicleId');
+
+    // Driver SDK — Android only, only when fleet vehicle ID is linked.
+    // The token callback is configured globally in main.dart with caching,
+    // so we don't override it here — we just trigger the initialize.
+    if (!kIsWeb && fleetVehicleId.isNotEmpty) {
       try {
-        final sdk = DriverSdkService();
-        sdk.onTokenRequested = (_) async => AppSession.accessToken;
-        await sdk.initialize(
+        final ok = await DriverSdkService().initialize(
           providerId: 'ayaka-transassist-mobility',
-          vehicleId: vehicleId.toString(),
+          vehicleId: fleetVehicleId,
         );
+        debugPrint('Driver SDK initialize result: $ok (vehicleId=$fleetVehicleId)');
       } catch (e) {
         debugPrint('DriverSdkService init skipped: $e');
       }
@@ -97,6 +104,17 @@ class AuthRepository {
 
   Future<void> logout() async {
     debugPrint('=== SESSION: logout — clearing stored data ===');
+    if (!kIsWeb) {
+      try {
+        await DriverSdkService().cleanup();
+        debugPrint('Driver SDK cleaned up before logout');
+      } catch (e) {
+        debugPrint('Driver SDK cleanup skipped: $e');
+      }
+    }
+    // Drop the cached JWT so the next driver can't reuse the previous
+    // driver's token if they log in on the same device.
+    DriverTokenCache.clear();
     await AppSession.clearSession();
   }
 }

@@ -59,4 +59,15 @@ class DriverSdkService {
       return false;
     }
   }
+
+  /// Cleanup the Driver SDK. Call before logout to prevent crashes on next login.
+  Future<bool> cleanup() async {
+    try {
+      final bool success = await _channel.invokeMethod('cleanup');
+      return success;
+    } catch (e) {
+      debugPrint('DriverSdkService.cleanup skipped: $e');
+      return false;
+    }
+  }
 }

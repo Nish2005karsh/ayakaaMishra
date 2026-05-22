@@ -43,10 +43,12 @@ class DocumentBloc extends Bloc<DocumentEvent, DocumentState> {
         return DocumentItem(name: name, detail: detail);
       }).toList();
 
+      // Only docs with an actual file uploaded count as "uploaded".
+      // `pending` = form record exists but no file → still needs upload.
+      // `notUploaded` = no record at all.
+      // `rejected` = file expired / rejected → needs re-upload.
       final uploaded = items
-          .where((i) =>
-              i.status == DocumentStatus.approved ||
-              i.status == DocumentStatus.pending)
+          .where((i) => i.status == DocumentStatus.approved)
           .length;
 
       debugPrint('=== Documents loaded: ${items.length} types, $uploaded uploaded ===');
